@@ -4,14 +4,14 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
-  name: resources.null.template.crossplane.io
+  name: resources.null.authentik.crossplane.io
 spec:
-  group: null.template.crossplane.io
+  group: null.authentik.crossplane.io
   names:
     categories:
     - crossplane
     - managed
-    - template
+    - authentik
     kind: Resource
     listKind: ResourceList
     plural: resources
