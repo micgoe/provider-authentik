@@ -8,7 +8,7 @@ import (
 // provider.
 var ExternalNameConfigs = map[string]config.ExternalName{
 	// Import requires using a randomly generated ID from provider: nl-2e21sda
-	"null_resource": idWithStub(),
+	"authentik_group": config.IdentifierFromProvider,
 }
 
 func idWithStub() config.ExternalName {

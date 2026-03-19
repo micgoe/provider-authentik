@@ -1,40 +1,2459 @@
-name: hashicorp/null
+name: goauthentik/authentik
 resources:
-    null_resource:
-        subCategory: ""
-        description: The null_resource resource implements the standard resource lifecycle but takes no further action. On Terraform 1.4 and later, use the terraform_data resource type https://developer.hashicorp.com/terraform/language/resources/terraform-data instead. Terraform 1.9 and later support the moved configuration block from null_resource to terraform_data. The triggers argument allows specifying an arbitrary set of values that, when changed, will cause the resource to be replaced.
-        name: null_resource
-        title: null_resource Resource - terraform-provider-null
+    authentik_application:
+        subCategory: Applications
+        name: authentik_application
+        title: authentik_application Resource - terraform-provider-authentik
         examples:
-            - name: cluster
+            - name: name
               manifest: |-
                 {
-                  "connection": [
-                    {
-                      "host": "${element(aws_instance.cluster[*].public_ip, 0)}"
-                    }
-                  ],
-                  "provisioner": {
-                    "remote-exec": [
-                      {
-                        "inline": [
-                          "bootstrap-cluster.sh ${join(\" \",\n      aws_instance.cluster[*].private_ip)}"
-                        ]
-                      }
-                    ]
-                  },
-                  "triggers": {
-                    "cluster_instance_ids": "${join(\",\", aws_instance.cluster[*].id)}"
-                  }
+                  "name": "example-app",
+                  "protocol_provider": "${authentik_provider_oauth2.name.id}",
+                  "slug": "example-app"
                 }
+              references:
+                protocol_provider: authentik_provider_oauth2.name.id
               dependencies:
-                aws_instance.cluster: |-
+                authentik_policy_binding.app-access: |-
                     {
-                      "ami": "ami-0dcc1e21636832c5d",
-                      "count": 3,
-                      "instance_type": "m5.large"
+                      "order": 0,
+                      "policy": "${authentik_policy_expression.policy.id}",
+                      "target": "${authentik_application.name.uuid}"
+                    }
+                authentik_policy_expression.policy: |-
+                    {
+                      "expression": "return True",
+                      "name": "example"
+                    }
+                authentik_provider_oauth2.name: |-
+                    {
+                      "authorization_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "client_id": "example-app",
+                      "client_secret": "test",
+                      "name": "example-app"
                     }
         argumentDocs:
-            id: (String) This is set to a random value at create time.
-            triggers: (Map of String) A map of arbitrary strings that, when changed, will force the null resource to be replaced, re-running any associated provisioners.
+            any: Defaults to any.
+            backchannel_providers: (List of Number)
+            group: (String)
+            id: (String) The ID of this resource.
+            meta_description: (String)
+            meta_icon: (String)
+            meta_launch_url: (String)
+            meta_publisher: (String)
+            name: (String)
+            open_in_new_tab: (Boolean) Defaults to false.
+            policy_engine_mode: '(String) Allowed values:'
+            protocol_provider: (Number)
+            slug: (String)
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_application_entitlement:
+        subCategory: Applications
+        name: authentik_application_entitlement
+        title: authentik_application_entitlement Resource - terraform-provider-authentik
+        examples:
+            - name: ent
+              manifest: |-
+                {
+                  "application": "${authentik_application.name.uuid}",
+                  "name": "test-ent"
+                }
+              references:
+                application: authentik_application.name.uuid
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "example-app",
+                      "slug": "example-app"
+                    }
+                authentik_group.group: |-
+                    {
+                      "name": "test-ent-group"
+                    }
+                authentik_policy_binding.test-ent-access: |-
+                    {
+                      "group": "${authentik_group.group.id}",
+                      "order": 0,
+                      "target": "${authentik_application_entitlement.ent.uuid}"
+                    }
+        argumentDocs:
+            application: (String)
+            attributes: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_blueprint:
+        subCategory: Blueprints
+        name: authentik_blueprint
+        title: authentik_blueprint Resource - terraform-provider-authentik
+        examples:
+            - name: instance
+              manifest: |-
+                {
+                  "context": "${jsonencode(\n    {\n      foo = \"bar\"\n    }\n  )}",
+                  "name": "blueprint-instance",
+                  "path": "default/flow-default-authentication-flow.yaml"
+                }
+        argumentDocs:
+            content: (String)
+            context: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            enabled: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            name: (String)
+            path: (String)
+        importStatements: []
+    authentik_brand:
+        subCategory: System
+        name: authentik_brand
+        title: authentik_brand Resource - terraform-provider-authentik
+        examples:
+            - name: default
+              manifest: |-
+                {
+                  "branding_title": "test",
+                  "default": true,
+                  "domain": "."
+                }
+        argumentDocs:
+            attributes: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            branding_custom_css: (String)
+            branding_default_flow_background: (String) Defaults to /static/dist/assets/images/flow_background.jpg.
+            branding_favicon: (String)
+            branding_logo: (String)
+            branding_title: (String) Defaults to authentik.
+            client_certificates: (List of String)
+            default: (Boolean) Defaults to false.
+            default_application: (String)
+            domain: (String)
+            flow_authentication: (String)
+            flow_device_code: (String)
+            flow_invalidation: (String)
+            flow_recovery: (String)
+            flow_unenrollment: (String)
+            flow_user_settings: (String)
+            id: (String) The ID of this resource.
+            web_certificate: (String)
+        importStatements: []
+    authentik_certificate_key_pair:
+        subCategory: System
+        name: authentik_certificate_key_pair
+        title: authentik_certificate_key_pair Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "certificate_data": "${tls_self_signed_cert.example.cert_pem}",
+                  "key_data": "${tls_private_key.example.private_key_pem}",
+                  "name": "keypair"
+                }
+              references:
+                certificate_data: tls_self_signed_cert.example.cert_pem
+                key_data: tls_private_key.example.private_key_pem
+              dependencies:
+                tls_private_key.example: |-
+                    {
+                      "algorithm": "ECDSA",
+                      "ecdsa_curve": "P384"
+                    }
+                tls_self_signed_cert.example: |-
+                    {
+                      "allowed_uses": [
+                        "key_encipherment",
+                        "digital_signature",
+                        "server_auth"
+                      ],
+                      "key_algorithm": "ECDSA",
+                      "private_key_pem": "${tls_private_key.example.private_key_pem}",
+                      "subject": [
+                        {
+                          "common_name": "example.com",
+                          "organization": "ACME Examples, Inc"
+                        }
+                      ],
+                      "validity_period_hours": 12
+                    }
+        argumentDocs:
+            certificate_data: (String)
+            id: (String) The ID of this resource.
+            key_data: (String, Sensitive)
+            name: (String)
+        importStatements: []
+    authentik_endpoints_connector_agent Resource - terraform-provider-authentik:
+        subCategory: Endpoint Devices
+        name: authentik_endpoints_connector_agent Resource - terraform-provider-authentik
+        title: authentik_endpoints_connector_agent Resource - terraform-provider-authentik
+        argumentDocs:
+            auth_session_duration: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to hours=8.'
+            auth_terminate_session_on_expiry: (Boolean) Defaults to true.
+            authorization_flow: (String)
+            challenge_idle_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to seconds=3.'
+            challenge_key: (String)
+            challenge_trigger_check_in: (Boolean) Defaults to true.
+            enabled: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            jwt_federation_providers: (List of String)
+            name: (String)
+            nss_gid_offset: (Number) Defaults to 4000.
+            nss_uid_offset: (Number) Defaults to 2000.
+            refresh_interval: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            snapshot_expiry: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to hours=24.'
+        importStatements: []
+    authentik_endpoints_connector_agent_enrollment_token:
+        subCategory: Endpoint Devices
+        name: authentik_endpoints_connector_agent_enrollment_token
+        title: authentik_endpoints_connector_agent_enrollment_token Resource - terraform-provider-authentik
+        examples:
+            - name: token
+              manifest: |-
+                {
+                  "connector": "${authentik_endpoints_connector_agent.agent.id}",
+                  "expiring": false,
+                  "name": "my-enrollment token",
+                  "retrieve_key": true
+                }
+              references:
+                connector: authentik_endpoints_connector_agent.agent.id
+              dependencies:
+                authentik_endpoints_connector_agent.agent: |-
+                    {
+                      "name": "agent"
+                    }
+        argumentDocs:
+            connector: (String)
+            device_access_group: (String)
+            expires: (String)
+            expires_in: (Number) Generated.
+            expiring: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            key: (String, Sensitive) Generated.
+            name: (String)
+            retrieve_key: (Boolean) Defaults to false.
+        importStatements: []
+    authentik_endpoints_device_access_group Resource - terraform-provider-authentik:
+        subCategory: Endpoint Devices
+        name: authentik_endpoints_device_access_group Resource - terraform-provider-authentik
+        title: authentik_endpoints_device_access_group Resource - terraform-provider-authentik
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_enterprise_license Resource - terraform-provider-authentik:
+        subCategory: Enterprise
+        name: authentik_enterprise_license Resource - terraform-provider-authentik
+        title: authentik_enterprise_license Resource - terraform-provider-authentik
+        argumentDocs:
+            expiry: (Number) Generated.
+            external_users: (Number) Generated.
+            id: (String) The ID of this resource.
+            internal_users: (Number) Generated.
+            key: (String, Sensitive)
+            name: (String) Generated.
+        importStatements: []
+    authentik_event_rule Resource - terraform-provider-authentik:
+        subCategory: Events
+        name: authentik_event_rule Resource - terraform-provider-authentik
+        title: authentik_event_rule Resource - terraform-provider-authentik
+        argumentDocs:
+            alert: Defaults to warning.
+            destination_event_user: (Boolean) Send notification to event user Defaults to false.
+            destination_group: (String) Group to send notification to
+            id: (String) The ID of this resource.
+            name: (String)
+            severity: '(String) Allowed values:'
+            transports: (List of String)
+        importStatements: []
+    authentik_event_transport:
+        subCategory: Events
+        name: authentik_event_transport
+        title: authentik_event_transport Resource - terraform-provider-authentik
+        examples:
+            - name: transport
+              manifest: |-
+                {
+                  "mode": "webhook",
+                  "name": "my-transport",
+                  "send_once": true,
+                  "webhook_url": "https://foo.bar"
+                }
+            - name: transport
+              manifest: |-
+                {
+                  "mode": "webhook_slack",
+                  "name": "my-transport",
+                  "send_once": true,
+                  "webhook_url": "https://discord.com/...."
+                }
+        argumentDocs:
+            email_subject_prefix: (String) Defaults to authentik Notification:.
+            email_template: (String) Defaults to email/event_notification.html.
+            id: (String) The ID of this resource.
+            mode: '(String) Allowed values:'
+            name: (String)
+            send_once: (Boolean) Defaults to true.
+            webhook_mapping_body: (String)
+            webhook_mapping_headers: (String)
+            webhook_url: (String)
+        importStatements: []
+    authentik_flow:
+        subCategory: Flows & Stages
+        name: authentik_flow
+        title: authentik_flow Resource - terraform-provider-authentik
+        examples:
+            - name: flow
+              manifest: |-
+                {
+                  "designation": "authorization",
+                  "name": "test-flow",
+                  "slug": "test-flow",
+                  "title": "Test flow"
+                }
+              dependencies:
+                authentik_flow_stage_binding.dummy-flow: |-
+                    {
+                      "order": 0,
+                      "stage": "${authentik_stage_dummy.name.id}",
+                      "target": "${authentik_flow.flow.uuid}"
+                    }
+                authentik_stage_dummy.name: |-
+                    {
+                      "name": "test-stage"
+                    }
+        argumentDocs:
+            any: Defaults to any.
+            authentication: '(String) Allowed values:'
+            background: (String) Optional URL to an image which will be used as the background during the flow. Defaults to /static/dist/assets/images/flow_background.jpg.
+            compatibility_mode: (Boolean) Defaults to true.
+            denied_action: (String) Defaults to message_continue.
+            designation: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            layout: '(String) Allowed values:'
+            name: (String)
+            policy_engine_mode: '(String) Allowed values:'
+            require_outpost: Defaults to none.
+            sidebar_right: Defaults to stacked.
+            slug: (String)
+            title: (String)
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_flow_stage_binding:
+        subCategory: Flows & Stages
+        name: authentik_flow_stage_binding
+        title: authentik_flow_stage_binding Resource - terraform-provider-authentik
+        examples:
+            - name: dummy-flow
+              manifest: |-
+                {
+                  "order": 0,
+                  "stage": "${authentik_stage_dummy.name.id}",
+                  "target": "${authentik_flow.flow.uuid}"
+                }
+              references:
+                stage: authentik_stage_dummy.name.id
+                target: authentik_flow.flow.uuid
+              dependencies:
+                authentik_flow.flow: |-
+                    {
+                      "designation": "authorization",
+                      "name": "test-flow",
+                      "slug": "test-flow",
+                      "title": "Test flow"
+                    }
+                authentik_stage_dummy.name: |-
+                    {
+                      "name": "test-stage"
+                    }
+        argumentDocs:
+            any: Defaults to any.
+            evaluate_on_plan: (Boolean) Evaluate policies during the Flow planning process. Defaults to true.
+            id: (String) The ID of this resource.
+            invalid_response_action: '(String) Allowed values:'
+            order: (Number)
+            policy_engine_mode: '(String) Allowed values:'
+            re_evaluate_policies: (Boolean) Evaluate policies when the Stage is present to the user. Defaults to false.
+            restart_with_context: Defaults to retry.
+            stage: (String)
+            target: (String)
+        importStatements: []
+    authentik_group:
+        subCategory: Directory
+        name: authentik_group
+        title: authentik_group Resource - terraform-provider-authentik
+        examples:
+            - name: group
+              manifest: |-
+                {
+                  "is_superuser": true,
+                  "name": "tf_admins",
+                  "users": [
+                    "${authentik_user.name.id}"
+                  ]
+                }
+              references:
+                users: authentik_user.name.id
+              dependencies:
+                authentik_user.name: |-
+                    {
+                      "name": "User",
+                      "username": "user"
+                    }
+        argumentDocs:
+            attributes: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            id: (String) The ID of this resource.
+            is_superuser: (Boolean) Defaults to false.
+            name: (String)
+            parents: (List of String)
+            roles: (List of String)
+            users: (List of Number) Generated.
+        importStatements: []
+    authentik_outpost:
+        subCategory: Applications
+        name: authentik_outpost
+        title: authentik_outpost Resource - terraform-provider-authentik
+        examples:
+            - name: outpost
+              manifest: |-
+                {
+                  "name": "test-outpost",
+                  "protocol_providers": [
+                    "${authentik_provider_proxy.proxy.id}"
+                  ]
+                }
+              references:
+                protocol_providers: authentik_provider_proxy.proxy.id
+              dependencies:
+                authentik_provider_proxy.proxy: |-
+                    {
+                      "authorization_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "external_host": "http://foo.bar.baz",
+                      "internal_host": "http://internal.local",
+                      "name": "proxy"
+                    }
+        argumentDocs:
+            config: (String) JSON format expected. Use jsonencode() to pass objects. Generated.
+            id: (String) The ID of this resource.
+            name: (String)
+            protocol_providers: (List of Number)
+            rac: Defaults to proxy.
+            service_connection: (String)
+            type: '(String) Allowed values:'
+        importStatements: []
+    authentik_outpost_provider_attachment:
+        subCategory: Applications
+        name: authentik_outpost_provider_attachment
+        title: authentik_outpost_provider_attachment Resource - terraform-provider-authentik
+        examples:
+            - name: attachment
+              manifest: |-
+                {
+                  "outpost": "${authentik_outpost.outpost.id}",
+                  "protocol_provider": "${authentik_provider_proxy.proxy.id}"
+                }
+              references:
+                outpost: authentik_outpost.outpost.id
+                protocol_provider: authentik_provider_proxy.proxy.id
+              dependencies:
+                authentik_outpost.outpost: |-
+                    {
+                      "lifecycle": [
+                        {
+                          "ignore_changes": [
+                            "${protocol_providers}"
+                          ]
+                        }
+                      ],
+                      "name": "test-outpost"
+                    }
+                authentik_provider_proxy.proxy: |-
+                    {
+                      "authorization_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "external_host": "http://foo.bar.baz",
+                      "internal_host": "http://internal.local",
+                      "name": "proxy"
+                    }
+            - name: attachment_embedded
+              manifest: |-
+                {
+                  "outpost": "${data.authentik_outpost.embedded.id}",
+                  "protocol_provider": "${authentik_provider_proxy.proxy.id}"
+                }
+              references:
+                outpost: data.authentik_outpost.embedded.id
+                protocol_provider: authentik_provider_proxy.proxy.id
+              dependencies:
+                authentik_outpost.outpost: |-
+                    {
+                      "lifecycle": [
+                        {
+                          "ignore_changes": [
+                            "${protocol_providers}"
+                          ]
+                        }
+                      ],
+                      "name": "test-outpost"
+                    }
+                authentik_provider_proxy.proxy: |-
+                    {
+                      "authorization_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "external_host": "http://foo.bar.baz",
+                      "internal_host": "http://internal.local",
+                      "name": "proxy"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            outpost: (String) The ID of the outpost.
+            protocol_provider: (Number) The ID of the provider.
+        importStatements: []
+    authentik_policy_binding:
+        subCategory: Customization
+        name: authentik_policy_binding
+        title: authentik_policy_binding Resource - terraform-provider-authentik
+        examples:
+            - name: app-access
+              manifest: |-
+                {
+                  "order": 0,
+                  "policy": "${authentik_policy_expression.policy.id}",
+                  "target": "${authentik_application.name.uuid}"
+                }
+              references:
+                policy: authentik_policy_expression.policy.id
+                target: authentik_application.name.uuid
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "test app",
+                      "slug": "test-app"
+                    }
+                authentik_policy_expression.policy: |-
+                    {
+                      "expression": "return True",
+                      "name": "example"
+                    }
+            - name: app-access
+              manifest: |-
+                {
+                  "group": "${data.authentik_group.admins.id}",
+                  "order": 0,
+                  "target": "${authentik_application.name.uuid}"
+                }
+              references:
+                group: data.authentik_group.admins.id
+                target: authentik_application.name.uuid
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "test app",
+                      "slug": "test-app"
+                    }
+                authentik_policy_expression.policy: |-
+                    {
+                      "expression": "return True",
+                      "name": "example"
+                    }
+        argumentDocs:
+            enabled: (Boolean) Defaults to true.
+            failure_result: (Boolean) Defaults to false.
+            group: (String) UUID of the group
+            id: (String) The ID of this resource.
+            negate: (Boolean) Defaults to false.
+            order: (Number)
+            policy: (String) UUID of the policy
+            target: (String) ID of the object this binding should apply to
+            timeout: (Number) Defaults to 30.
+            user: (Number) PK of the user
+        importStatements: []
+    authentik_policy_dummy:
+        subCategory: Customization
+        name: authentik_policy_dummy
+        title: authentik_policy_dummy Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "dummy"
+                }
+        argumentDocs:
+            execution_logging: (Boolean) Defaults to false.
+            id: (String) The ID of this resource.
+            name: (String)
+            result: (Boolean) Defaults to false.
+            wait_max: (Number) Defaults to 30.
+            wait_min: (Number) Defaults to 5.
+        importStatements: []
+    authentik_policy_event_matcher:
+        subCategory: Customization
+        name: authentik_policy_event_matcher
+        title: authentik_policy_event_matcher Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "action": "login",
+                  "app": "authentik.events",
+                  "client_ip": "1.2.3.4",
+                  "name": "login-from-1.2.3.4"
+                }
+        argumentDocs:
+            action: (String)
+            app: '(String) Allowed values:'
+            client_ip: (String)
+            execution_logging: (Boolean) Defaults to false.
+            id: (String) The ID of this resource.
+            model: '(String) Allowed values:'
+            name: (String)
+        importStatements: []
+    authentik_policy_expiry:
+        subCategory: Customization
+        name: authentik_policy_expiry
+        title: authentik_policy_expiry Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "days": 3,
+                  "name": "expiry"
+                }
+        argumentDocs:
+            days: (Number)
+            deny_only: (Boolean) Defaults to false.
+            execution_logging: (Boolean) Defaults to false.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_policy_expression:
+        subCategory: Customization
+        name: authentik_policy_expression
+        title: authentik_policy_expression Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "expression": "return True",
+                  "name": "expression"
+                }
+        argumentDocs:
+            execution_logging: (Boolean) Defaults to false.
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_policy_geoip Resource - terraform-provider-authentik:
+        subCategory: Customization
+        name: authentik_policy_geoip Resource - terraform-provider-authentik
+        title: authentik_policy_geoip Resource - terraform-provider-authentik
+        argumentDocs:
+            asns: (List of Number)
+            check_history_distance: (Boolean)
+            check_impossible_travel: (Boolean)
+            countries: '(List of String) Allowed values:'
+            distance_tolerance_km: (Number) Defaults to 50.
+            execution_logging: (Boolean) Defaults to false.
+            history_login_count: (Number) Defaults to 5.
+            history_max_distance_km: (Number) Defaults to 100.
+            id: (String) The ID of this resource.
+            impossible_tolerance_km: (Number) Defaults to 100.
+            name: (String)
+        importStatements: []
+    authentik_policy_password:
+        subCategory: Customization
+        name: authentik_policy_password
+        title: authentik_policy_password Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "error_message": "foo",
+                  "length_min": 8,
+                  "name": "password"
+                }
+        argumentDocs:
+            amount_digits: (Number)
+            amount_lowercase: (Number)
+            amount_symbols: (Number)
+            amount_uppercase: (Number)
+            check_have_i_been_pwned: (Boolean) Defaults to false.
+            check_static_rules: (Boolean) Defaults to true.
+            check_zxcvbn: (Boolean) Defaults to false.
+            error_message: (String)
+            execution_logging: (Boolean) Defaults to false.
+            hibp_allowed_count: (Number) Defaults to 1.
+            id: (String) The ID of this resource.
+            length_min: (Number)
+            name: (String)
+            password_field: (String) Defaults to password.
+            symbol_charset: (String) Defaults to !\"#$%&'()*+,-./:;<=>?@[\]^_{|}~`.
+            zxcvbn_score_threshold: (Number) Defaults to 2.
+        importStatements: []
+    authentik_policy_reputation:
+        subCategory: Customization
+        name: authentik_policy_reputation
+        title: authentik_policy_reputation Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "reputation"
+                }
+        argumentDocs:
+            check_ip: (Boolean) Defaults to true.
+            check_username: (Boolean) Defaults to true.
+            execution_logging: (Boolean) Defaults to false.
+            id: (String) The ID of this resource.
+            name: (String)
+            threshold: (Number) Defaults to 10.
+        importStatements: []
+    authentik_policy_unique_password Resource - terraform-provider-authentik:
+        subCategory: Customization
+        name: authentik_policy_unique_password Resource - terraform-provider-authentik
+        title: authentik_policy_unique_password Resource - terraform-provider-authentik
+        argumentDocs:
+            execution_logging: (Boolean) Defaults to false.
+            id: (String) The ID of this resource.
+            name: (String)
+            num_historical_passwords: (Number) Defaults to 1.
+            password_field: (String) Defaults to password.
+        importStatements: []
+    authentik_property_mapping_notification:
+        subCategory: Customization
+        description: Manage Notification Property mappings
+        name: authentik_property_mapping_notification
+        title: authentik_property_mapping_notification Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "expression": "return {\"foo\": context['foo']}",
+                  "name": "custom-field"
+                }
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_provider_google_workspace Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage Google Workspace Provider Property mappings
+        name: authentik_property_mapping_provider_google_workspace Resource - terraform-provider-authentik
+        title: authentik_property_mapping_provider_google_workspace Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_provider_microsoft_entra Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage Microsoft Entra Provider Property mappings
+        name: authentik_property_mapping_provider_microsoft_entra Resource - terraform-provider-authentik
+        title: authentik_property_mapping_provider_microsoft_entra Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_provider_rac Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage RAC Provider Property mappings
+        name: authentik_property_mapping_provider_rac Resource - terraform-provider-authentik
+        title: authentik_property_mapping_provider_rac Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            settings: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+        importStatements: []
+    authentik_property_mapping_provider_radius Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage Radius Provider Property mappings
+        name: authentik_property_mapping_provider_radius Resource - terraform-provider-authentik
+        title: authentik_property_mapping_provider_radius Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_provider_saml:
+        subCategory: Customization
+        description: Manage SAML Provider Property mappings
+        name: authentik_property_mapping_provider_saml
+        title: authentik_property_mapping_provider_saml Resource - terraform-provider-authentik
+        examples:
+            - name: saml-aws-rolessessionname
+              manifest: |-
+                {
+                  "expression": "return user.email",
+                  "name": "SAML AWS RoleSessionName",
+                  "saml_name": "https://aws.amazon.com/SAML/Attributes/RoleSessionName"
+                }
+        argumentDocs:
+            expression: (String)
+            friendly_name: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            saml_name: (String)
+        importStatements: []
+    authentik_property_mapping_provider_scim Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage SCIM Provider Property mappings
+        name: authentik_property_mapping_provider_scim Resource - terraform-provider-authentik
+        title: authentik_property_mapping_provider_scim Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_provider_scope:
+        subCategory: Customization
+        description: Manage Scope Provider Property mappings
+        name: authentik_property_mapping_provider_scope
+        title: authentik_property_mapping_provider_scope Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "expression": "return {\n  \"policy\": \"readwrite\",\n}\n",
+                  "name": "minio",
+                  "scope_name": "minio"
+                }
+        argumentDocs:
+            description: (String)
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            scope_name: (String)
+        importStatements: []
+    authentik_property_mapping_source_kerberos Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage Kerberos Source Property mappings
+        name: authentik_property_mapping_source_kerberos Resource - terraform-provider-authentik
+        title: authentik_property_mapping_source_kerberos Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_source_ldap:
+        subCategory: Customization
+        description: Manage LDAP Source Property mappings
+        name: authentik_property_mapping_source_ldap
+        title: authentik_property_mapping_source_ldap Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "expression": "return ldap.get('sAMAccountName')",
+                  "name": "custom-field"
+                }
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_source_oauth Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage OAuth Source Property mappings
+        name: authentik_property_mapping_source_oauth Resource - terraform-provider-authentik
+        title: authentik_property_mapping_source_oauth Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_source_plex Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage Plex Source Property mappings
+        name: authentik_property_mapping_source_plex Resource - terraform-provider-authentik
+        title: authentik_property_mapping_source_plex Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_source_saml Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage SAML Source Property mappings
+        name: authentik_property_mapping_source_saml Resource - terraform-provider-authentik
+        title: authentik_property_mapping_source_saml Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_property_mapping_source_scim Resource - terraform-provider-authentik:
+        subCategory: Customization
+        description: Manage SCIM Source Property mappings
+        name: authentik_property_mapping_source_scim Resource - terraform-provider-authentik
+        title: authentik_property_mapping_source_scim Resource - terraform-provider-authentik
+        argumentDocs:
+            expression: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_provider_google_workspace Resource - terraform-provider-authentik:
+        subCategory: Applications
+        name: authentik_provider_google_workspace Resource - terraform-provider-authentik
+        title: authentik_provider_google_workspace Resource - terraform-provider-authentik
+        argumentDocs:
+            credentials: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            default_group_email_domain: (String)
+            delegated_subject: (String)
+            do_nothing: Defaults to delete.
+            dry_run: (Boolean) Defaults to false.
+            exclude_users_service_account: (Boolean)
+            filter_group: (String)
+            group_delete_action: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            name: (String)
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            suspend: Defaults to delete.
+            sync_page_size: (Number) Defaults to 100.
+            sync_page_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            user_delete_action: '(String) Allowed values:'
+        importStatements: []
+    authentik_provider_ldap:
+        subCategory: Applications
+        name: authentik_provider_ldap
+        title: authentik_provider_ldap Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "base_dn": "dc=ldap,dc=goauthentik,dc=io",
+                  "bind_flow": "${data.authentik_flow.default-authentication-flow.id}",
+                  "name": "ldap-app"
+                }
+              references:
+                bind_flow: data.authentik_flow.default-authentication-flow.id
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "ldap-app",
+                      "protocol_provider": "${authentik_provider_ldap.name.id}",
+                      "slug": "ldap-app"
+                    }
+        argumentDocs:
+            base_dn: (String)
+            bind_flow: (String)
+            bind_mode: (String) Defaults to direct.
+            certificate: (String)
+            gid_start_number: (Number) Defaults to 4000.
+            id: (String) The ID of this resource.
+            mfa_support: (Boolean) Defaults to true.
+            name: (String)
+            search_mode: (String) Defaults to direct.
+            tls_server_name: (String)
+            uid_start_number: (Number) Defaults to 2000.
+            unbind_flow: (String)
+        importStatements: []
+    authentik_provider_microsoft_entra Resource - terraform-provider-authentik:
+        subCategory: Applications
+        name: authentik_provider_microsoft_entra Resource - terraform-provider-authentik
+        title: authentik_provider_microsoft_entra Resource - terraform-provider-authentik
+        argumentDocs:
+            client_id: (String)
+            client_secret: (String, Sensitive)
+            do_nothing: Defaults to delete.
+            dry_run: (Boolean) Defaults to false.
+            exclude_users_service_account: (Boolean)
+            filter_group: (String)
+            group_delete_action: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            name: (String)
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            sync_page_size: (Number) Defaults to 100.
+            sync_page_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            tenant_id: (String)
+            user_delete_action: '(String) Allowed values:'
+        importStatements: []
+    authentik_provider_oauth2:
+        subCategory: Applications
+        name: authentik_provider_oauth2
+        title: authentik_provider_oauth2 Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "allowed_redirect_uris": [
+                    {
+                      "matching_mode": "strict",
+                      "url": "http://localhost"
+                    }
+                  ],
+                  "client_id": "grafana",
+                  "name": "grafana"
+                }
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "test app",
+                      "protocol_provider": "${authentik_provider_oauth2.name.id}",
+                      "slug": "test-app"
+                    }
+        argumentDocs:
+            access_code_validity: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=1.'
+            access_token_validity: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=10.'
+            allowed_redirect_uris: (List of Map of String)
+            authentication_flow: (String)
+            authorization_flow: (String)
+            client_id: (String)
+            client_secret: (String, Sensitive) Generated.
+            client_type: '(String) Allowed values:'
+            encryption_key: (String)
+            frontchannel: Defaults to backchannel.
+            id: (String) The ID of this resource.
+            include_claims_in_id_token: (Boolean) Defaults to true.
+            invalidation_flow: (String)
+            issuer_mode: '(String) Allowed values:'
+            jwks_sources: (List of String) Deprecated. Use jwt_federation_sources instead.
+            jwt_federation_providers: (List of Number) JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
+            jwt_federation_sources: (List of String) JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
+            logout_method: '(String) Allowed values:'
+            logout_uri: (String)
+            name: (String)
+            per_provider: Defaults to per_provider.
+            property_mappings: (List of String)
+            public: Defaults to confidential.
+            refresh_token_threshold: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to seconds=0.'
+            refresh_token_validity: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to days=30.'
+            signing_key: (String)
+            sub_mode: '(String) Allowed values:'
+            user_upn: Defaults to hashed_user_id.
+        importStatements: []
+    authentik_provider_proxy:
+        subCategory: Applications
+        name: authentik_provider_proxy
+        title: authentik_provider_proxy Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "authorization_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                  "external_host": "http://internal.service",
+                  "internal_host": "http://foo.bar.baz",
+                  "name": "test-app"
+                }
+              references:
+                authorization_flow: data.authentik_flow.default-authorization-flow.id
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "test-app",
+                      "protocol_provider": "${authentik_provider_proxy.name.id}",
+                      "slug": "test-app"
+                    }
+        argumentDocs:
+            access_token_validity: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=10.'
+            authentication_flow: (String)
+            authorization_flow: (String)
+            basic_auth_enabled: (Boolean) Defaults to false.
+            basic_auth_password_attribute: (String)
+            basic_auth_username_attribute: (String)
+            client_id: (String) Generated.
+            cookie_domain: (String)
+            external_host: (String)
+            forward_domain: Defaults to proxy.
+            id: (String) The ID of this resource.
+            intercept_header_auth: (Boolean) Defaults to true.
+            internal_host: (String)
+            internal_host_ssl_validation: (Boolean) Defaults to true.
+            invalidation_flow: (String)
+            jwks_sources: (List of String) Deprecated. Use jwt_federation_sources instead.
+            jwt_federation_providers: (List of Number) JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
+            jwt_federation_sources: (List of String) JWTs issued by keys configured in any of the selected sources can be used to authenticate on behalf of this provider.
+            mode: '(String) Allowed values:'
+            name: (String)
+            property_mappings: (List of String)
+            refresh_token_validity: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to days=30.'
+            skip_path_regex: (String)
+        importStatements: []
+    authentik_provider_rac Resource - terraform-provider-authentik:
+        subCategory: Applications
+        name: authentik_provider_rac Resource - terraform-provider-authentik
+        title: authentik_provider_rac Resource - terraform-provider-authentik
+        argumentDocs:
+            authentication_flow: (String)
+            authorization_flow: (String)
+            connection_expiry: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to seconds=0.'
+            id: (String) The ID of this resource.
+            name: (String)
+            property_mappings: (List of String)
+            settings: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+        importStatements: []
+    authentik_provider_radius:
+        subCategory: Applications
+        name: authentik_provider_radius
+        title: authentik_provider_radius Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "authorization_flow": "${data.authentik_flow.default-authentication-flow.id}",
+                  "client_networks": "10.10.0.0/24",
+                  "name": "radius-app",
+                  "shared_secret": "my-shared-secret"
+                }
+              references:
+                authorization_flow: data.authentik_flow.default-authentication-flow.id
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "radius-app",
+                      "protocol_provider": "${authentik_provider_radius.name.id}",
+                      "slug": "radius-app"
+                    }
+        argumentDocs:
+            authorization_flow: (String)
+            certificate: (String)
+            client_networks: (String) Defaults to 0.0.0.0/0, ::/0.
+            id: (String) The ID of this resource.
+            invalidation_flow: (String)
+            mfa_support: (Boolean) Defaults to true.
+            name: (String)
+            property_mappings: (List of String)
+            shared_secret: (String, Sensitive)
+        importStatements: []
+    authentik_provider_saml:
+        subCategory: Applications
+        name: authentik_provider_saml
+        title: authentik_provider_saml Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "acs_url": "http://localhost",
+                  "authorization_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                  "name": "test-app"
+                }
+              references:
+                authorization_flow: data.authentik_flow.default-authorization-flow.id
+              dependencies:
+                authentik_application.name: |-
+                    {
+                      "name": "test-app",
+                      "protocol_provider": "${authentik_provider_saml.name.id}",
+                      "slug": "test-app"
+                    }
+        argumentDocs:
+            acs_url: (String)
+            assertion_valid_not_before: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=-5.'
+            assertion_valid_not_on_or_after: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=5.'
+            audience: (String) Defaults to ``.
+            authentication_flow: (String)
+            authn_context_class_ref_mapping: (String)
+            authorization_flow: (String)
+            backchannel: Defaults to frontchannel_iframe.
+            default_relay_state: (String) Defaults to ``.
+            digest_algorithm: '(String) Allowed values:'
+            encryption_kp: (String)
+            http://www.w3.org/2000/09/xmldsig#dsa-sha1: Defaults to http://www.w3.org/2001/04/xmldsig-more#rsa-sha256.
+            http://www.w3.org/2001/04/xmlenc#sha512: Defaults to http://www.w3.org/2001/04/xmlenc#sha256.
+            id: (String) The ID of this resource.
+            invalidation_flow: (String)
+            issuer: (String) Defaults to authentik.
+            logout_method: '(String) Allowed values:'
+            name: (String)
+            name_id_mapping: (String)
+            post: Defaults to redirect.
+            property_mappings: (List of String)
+            session_valid_not_on_or_after: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=86400.'
+            sign_assertion: (Boolean) Defaults to true.
+            sign_logout_request: (Boolean) Defaults to false.
+            sign_response: (Boolean) Defaults to false.
+            signature_algorithm: '(String) Allowed values:'
+            signing_kp: (String)
+            sls_binding: '(String) Allowed values:'
+            sls_url: (String)
+            sp_binding: '(String) Allowed values:'
+            url_slo_post: (String) Generated.
+            url_slo_redirect: (String) Generated.
+            url_sso_init: (String) Generated.
+            url_sso_post: (String) Generated.
+            url_sso_redirect: (String) Generated.
+            verification_kp: (String)
+        importStatements: []
+    authentik_provider_scim:
+        subCategory: Applications
+        name: authentik_provider_scim
+        title: authentik_provider_scim Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "test-app",
+                  "property_mappings": [
+                    "${data.authentik_property_mapping_scim.user.id}"
+                  ],
+                  "property_mappings_group": [
+                    "${data.authentik_property_mapping_scim.group.id}"
+                  ],
+                  "token": "foo",
+                  "url": "http://localhost"
+                }
+              references:
+                property_mappings: data.authentik_property_mapping_scim.user.id
+                property_mappings_group: data.authentik_property_mapping_scim.group.id
+        argumentDocs:
+            auth_mode: '(String) Allowed values:'
+            auth_oauth: (String) Slug of an OAuth source used for authentication
+            auth_oauth_params: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            compatibility_mode: '(String) Allowed values:'
+            dry_run: (Boolean) Defaults to false.
+            exclude_users_service_account: (Boolean)
+            filter_group: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            oauth: Defaults to token.
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            service_provider_config_cache_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to hours=1.'
+            sfdc: Defaults to default.
+            sync_page_size: (Number) Defaults to 100.
+            sync_page_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            token: (String, Sensitive)
+            url: (String)
+        importStatements: []
+    authentik_provider_ssf Resource - terraform-provider-authentik:
+        subCategory: Applications
+        name: authentik_provider_ssf Resource - terraform-provider-authentik
+        title: authentik_provider_ssf Resource - terraform-provider-authentik
+        argumentDocs:
+            event_retention: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to days=30.'
+            id: (String) The ID of this resource.
+            jwt_federation_providers: (List of Number) JWTs issued by any of the configured providers can be used to authenticate on behalf of this provider.
+            name: (String)
+            signing_key: (String)
+        importStatements: []
+    authentik_rac_endpoint Resource - terraform-provider-authentik:
+        subCategory: Applications
+        name: authentik_rac_endpoint Resource - terraform-provider-authentik
+        title: authentik_rac_endpoint Resource - terraform-provider-authentik
+        argumentDocs:
+            host: (String)
+            id: (String) The ID of this resource.
+            maximum_connections: (Number) Defaults to 0.
+            name: (String)
+            property_mappings: (List of String)
+            protocol: '(String) Allowed values:'
+            protocol_provider: (Number)
+            settings: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+        importStatements: []
+    authentik_rbac_initial_permissions Resource - terraform-provider-authentik:
+        subCategory: RBAC
+        name: authentik_rbac_initial_permissions Resource - terraform-provider-authentik
+        title: authentik_rbac_initial_permissions Resource - terraform-provider-authentik
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+            permissions: (List of Number)
+            role: (String)
+        importStatements: []
+    authentik_rbac_permission_role:
+        subCategory: RBAC
+        name: authentik_rbac_permission_role
+        title: authentik_rbac_permission_role Resource - terraform-provider-authentik
+        examples:
+            - name: global-permission
+              manifest: |-
+                {
+                  "permission": "authentik_flows.inspect_flow",
+                  "role": "${authentik_rbac_role.my-role.id}"
+                }
+              references:
+                role: authentik_rbac_role.my-role.id
+              dependencies:
+                authentik_flow.flow: |-
+                    {
+                      "designation": "authorization",
+                      "name": "test-flow",
+                      "slug": "test-flow",
+                      "title": "Test flow"
+                    }
+                authentik_rbac_role.my-role: |-
+                    {
+                      "name": "my-role"
+                    }
+            - name: global-permission
+              manifest: |-
+                {
+                  "model": "authentik_flows.flow",
+                  "object_id": "${authentik_flow.flow.uuid}",
+                  "permission": "inspect_flow",
+                  "role": "${authentik_rbac_role.my-role.id}"
+                }
+              references:
+                object_id: authentik_flow.flow.uuid
+                role: authentik_rbac_role.my-role.id
+              dependencies:
+                authentik_flow.flow: |-
+                    {
+                      "designation": "authorization",
+                      "name": "test-flow",
+                      "slug": "test-flow",
+                      "title": "Test flow"
+                    }
+                authentik_rbac_role.my-role: |-
+                    {
+                      "name": "my-role"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            model: '(String) Allowed values:'
+            object_id: (String)
+            permission: (String)
+            role: (String)
+        importStatements: []
+    authentik_rbac_permission_user:
+        subCategory: RBAC
+        description: ~> This resource is deprecated. Migrate to authentik_rbac_permission_role.
+        name: authentik_rbac_permission_user
+        title: authentik_rbac_permission_user Resource - terraform-provider-authentik
+        examples:
+            - name: global-permission
+              manifest: |-
+                {
+                  "permission": "authentik_flows.inspect_flow",
+                  "user": "${authentik_user.name.id}"
+                }
+              references:
+                user: authentik_user.name.id
+              dependencies:
+                authentik_flow.flow: |-
+                    {
+                      "designation": "authorization",
+                      "name": "test-flow",
+                      "slug": "test-flow",
+                      "title": "Test flow"
+                    }
+                authentik_user.name: |-
+                    {
+                      "name": "User",
+                      "username": "user"
+                    }
+            - name: global-permission
+              manifest: |-
+                {
+                  "model": "authentik_flows.flow",
+                  "object_id": "${authentik_flow.flow.uuid}",
+                  "permission": "inspect_flow",
+                  "user": "${authentik_user.name.id}"
+                }
+              references:
+                object_id: authentik_flow.flow.uuid
+                user: authentik_user.name.id
+              dependencies:
+                authentik_flow.flow: |-
+                    {
+                      "designation": "authorization",
+                      "name": "test-flow",
+                      "slug": "test-flow",
+                      "title": "Test flow"
+                    }
+                authentik_user.name: |-
+                    {
+                      "name": "User",
+                      "username": "user"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            model: '(String) Allowed values:'
+            object_id: (String)
+            permission: (String)
+            user: (Number)
+        importStatements: []
+    authentik_rbac_role Resource - terraform-provider-authentik:
+        subCategory: RBAC
+        name: authentik_rbac_role Resource - terraform-provider-authentik
+        title: authentik_rbac_role Resource - terraform-provider-authentik
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_service_connection_docker:
+        subCategory: Applications
+        name: authentik_service_connection_docker
+        title: authentik_service_connection_docker Resource - terraform-provider-authentik
+        examples:
+            - name: local
+              manifest: |-
+                {
+                  "local": true,
+                  "name": "local"
+                }
+              dependencies:
+                authentik_certificate_key_pair.tls-auth: |-
+                    {
+                      "certificate_data": "...",
+                      "key_data": "...",
+                      "name": "docker-tls-auth"
+                    }
+                authentik_certificate_key_pair.tls-verification: |-
+                    {
+                      "certificate_data": "...",
+                      "name": "docker-tls-verification"
+                    }
+            - name: remote-host
+              manifest: |-
+                {
+                  "name": "remote-host",
+                  "tls_authentication": "${authentik_certificate_key_pair.tls-verification.id}",
+                  "tls_verification": "${authentik_certificate_key_pair.tls-auth.id}",
+                  "url": "http://1.2.3.4:2368"
+                }
+              references:
+                tls_authentication: authentik_certificate_key_pair.tls-verification.id
+                tls_verification: authentik_certificate_key_pair.tls-auth.id
+              dependencies:
+                authentik_certificate_key_pair.tls-auth: |-
+                    {
+                      "certificate_data": "...",
+                      "key_data": "...",
+                      "name": "docker-tls-auth"
+                    }
+                authentik_certificate_key_pair.tls-verification: |-
+                    {
+                      "certificate_data": "...",
+                      "name": "docker-tls-verification"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            local: (Boolean) Defaults to false.
+            name: (String)
+            tls_authentication: (String)
+            tls_verification: (String)
+            url: (String) Defaults to http+unix:///var/run/docker.sock.
+        importStatements: []
+    authentik_service_connection_kubernetes:
+        subCategory: Applications
+        name: authentik_service_connection_kubernetes
+        title: authentik_service_connection_kubernetes Resource - terraform-provider-authentik
+        examples:
+            - name: local
+              manifest: |-
+                {
+                  "local": true,
+                  "name": "local"
+                }
+            - name: remote-test-cluster
+              manifest: |-
+                {
+                  "kubeconfig": "kind: Config\nusers: [...]\n",
+                  "name": "test-cluster"
+                }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            kubeconfig: (String, Sensitive) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            local: (Boolean) Defaults to false.
+            name: (String)
+            verify_ssl: (Boolean) Defaults to true.
+        importStatements: []
+    authentik_source_kerberos Resource - terraform-provider-authentik:
+        subCategory: Directory
+        name: authentik_source_kerberos Resource - terraform-provider-authentik
+        title: authentik_source_kerberos Resource - terraform-provider-authentik
+        argumentDocs:
+            any: Defaults to any.
+            authentication_flow: (String)
+            deferred_end: Defaults to deferred_end.
+            enabled: (Boolean) Defaults to true.
+            enrollment_flow: (String)
+            group_matching_mode: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            krb5_conf: (String) Custom krb5.conf to use. Uses the system one by default
+            name: (String)
+            name_deny: Defaults to identifier.
+            password_login_update_internal_password: (Boolean) If enabled, the authentik-stored password will be updated upon login with the Kerberos password backend Defaults to false.
+            policy_engine_mode: '(String) Allowed values:'
+            realm: (String) Kerberos realm
+            slug: (String)
+            spnego_ccache: (String) Credential cache to use for SPNEGO in form type:residual
+            spnego_keytab: (String, Sensitive) SPNEGO keytab base64-encoded or path to keytab in the form FILE:path
+            spnego_server_name: (String) Force the use of a specific server name for SPNEGO
+            sync_ccache: (String) Credentials cache to authenticate to kadmin for sync. Must be in the form TYPE:residual
+            sync_keytab: (String, Sensitive) Keytab to authenticate to kadmin for sync. Must be base64-encoded or in the form TYPE:residual
+            sync_outgoing_trigger_mode: '(String) Allowed values:'
+            sync_password: (String, Sensitive) Password to authenticate to kadmin for sync
+            sync_principal: (String) Principal to authenticate to kadmin for sync.
+            sync_users: (Boolean) Sync users from Kerberos into authentik Defaults to true.
+            sync_users_password: (Boolean) When a user changes their password, sync it back to Kerberos Defaults to true.
+            user_matching_mode: '(String) Allowed values:'
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            username_deny: Defaults to identifier.
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_source_ldap:
+        subCategory: Directory
+        name: authentik_source_ldap
+        title: authentik_source_ldap Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "base_dn": "dn=foo",
+                  "bind_cn": "foo",
+                  "bind_password": "bar",
+                  "name": "ldap-test",
+                  "server_uri": "ldaps://1.2.3.4",
+                  "slug": "ldap-test"
+                }
+        argumentDocs:
+            additional_group_dn: (String) Defaults to ``.
+            additional_user_dn: (String) Defaults to ``.
+            base_dn: (String)
+            bind_cn: (String)
+            bind_password: (String, Sensitive)
+            deferred_end: Defaults to deferred_end.
+            delete_not_found_objects: (Boolean) Defaults to false.
+            enabled: (Boolean) Defaults to true.
+            group_membership_field: (String) Defaults to member.
+            group_object_filter: (String) Defaults to (objectClass=group).
+            id: (String) The ID of this resource.
+            lookup_groups_from_user: (Boolean) Defaults to true.
+            name: (String)
+            object_uniqueness_field: (String) Defaults to objectSid.
+            password_login_update_internal_password: (Boolean) Defaults to false.
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            server_uri: (String)
+            slug: (String)
+            sni: (Boolean) Defaults to false.
+            start_tls: (Boolean) Defaults to true.
+            sync_groups: (Boolean) Defaults to true.
+            sync_outgoing_trigger_mode: '(String) Allowed values:'
+            sync_parent_group: (String)
+            sync_users: (Boolean) Defaults to true.
+            sync_users_password: (Boolean) Defaults to true.
+            user_membership_attribute: (String) Defaults to distinguishedName.
+            user_object_filter: (String) Defaults to (objectClass=person).
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_source_oauth:
+        subCategory: Directory
+        name: authentik_source_oauth
+        title: authentik_source_oauth Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "authentication_flow": "${data.authentik_flow.default-source-authentication.id}",
+                  "consumer_key": "foo",
+                  "consumer_secret": "bar",
+                  "enrollment_flow": "${data.authentik_flow.default-source-enrollment.id}",
+                  "name": "discord",
+                  "provider_type": "discord",
+                  "slug": "discord"
+                }
+              references:
+                authentication_flow: data.authentik_flow.default-source-authentication.id
+                enrollment_flow: data.authentik_flow.default-source-enrollment.id
+        argumentDocs:
+            S256: Defaults to none.
+            access_token_url: (String) Only required for OAuth1.
+            additional_scopes: (String)
+            any: Defaults to any.
+            authentication_flow: (String)
+            authorization_code_auth_method: '(String) Allowed values:'
+            authorization_url: (String) Manually configure OAuth2 URLs when oidc_well_known_url is not set.
+            callback_uri: (String) Generated.
+            consumer_key: (String)
+            consumer_secret: (String, Sensitive)
+            enabled: (Boolean) Defaults to true.
+            enrollment_flow: (String)
+            group_matching_mode: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            name: (String)
+            name_deny: Defaults to identifier.
+            oidc_jwks: (String) Manually configure JWKS keys for use with machine-to-machine authentication. JSON format expected. Use jsonencode() to pass objects. Generated.
+            oidc_jwks_url: (String) Automatically configure JWKS if not specified by oidc_well_known_url.
+            oidc_well_known_url: (String) Automatically configure source from OIDC well-known endpoint. URL is taken as is, and should end with .well-known/openid-configuration.
+            pkce: '(String) Allowed values:'
+            policy_engine_mode: '(String) Allowed values:'
+            post_body: Defaults to basic_auth.
+            profile_url: (String) Manually configure OAuth2 URLs when oidc_well_known_url is not set.
+            promoted: (Boolean) Defaults to false.
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            provider_type: '(String) Allowed values:'
+            request_token_url: (String) Manually configure OAuth2 URLs when oidc_well_known_url is not set.
+            slug: (String)
+            user_matching_mode: '(String) Allowed values:'
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            username_deny: Defaults to identifier.
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_source_plex:
+        subCategory: Directory
+        name: authentik_source_plex
+        title: authentik_source_plex Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "authentication_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                  "client_id": "foo-bar-baz",
+                  "enrollment_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                  "name": "plex",
+                  "plex_token": "foo",
+                  "slug": "plex"
+                }
+              references:
+                authentication_flow: data.authentik_flow.default-authorization-flow.id
+                enrollment_flow: data.authentik_flow.default-authorization-flow.id
+        argumentDocs:
+            allow_friends: (Boolean) Defaults to true.
+            allowed_servers: (List of String)
+            any: Defaults to any.
+            authentication_flow: (String)
+            client_id: (String)
+            enabled: (Boolean) Defaults to true.
+            enrollment_flow: (String)
+            group_matching_mode: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            name: (String)
+            name_deny: Defaults to identifier.
+            plex_token: (String, Sensitive)
+            policy_engine_mode: '(String) Allowed values:'
+            promoted: (Boolean) Defaults to false.
+            slug: (String)
+            user_matching_mode: '(String) Allowed values:'
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            username_deny: Defaults to identifier.
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_source_saml:
+        subCategory: Directory
+        name: authentik_source_saml
+        title: authentik_source_saml Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "authentication_flow": "${data.authentik_flow.default-source-authentication.id}",
+                  "enrollment_flow": "${data.authentik_flow.default-source-enrollment.id}",
+                  "name": "test-source",
+                  "pre_authentication_flow": "${data.authentik_flow.default-source-pre-authentication.id}",
+                  "slug": "test-source",
+                  "sso_url": "http://localhost"
+                }
+              references:
+                authentication_flow: data.authentik_flow.default-source-authentication.id
+                enrollment_flow: data.authentik_flow.default-source-enrollment.id
+                pre_authentication_flow: data.authentik_flow.default-source-pre-authentication.id
+        argumentDocs:
+            POST_AUTO: Defaults to REDIRECT.
+            allow_idp_initiated: (Boolean) Defaults to false.
+            any: Defaults to any.
+            authentication_flow: (String)
+            binding_type: '(String) Allowed values:'
+            digest_algorithm: '(String) Allowed values:'
+            enabled: (Boolean) Defaults to true.
+            encryption_kp: (String)
+            enrollment_flow: (String)
+            group_matching_mode: '(String) Allowed values:'
+            http://www.w3.org/2000/09/xmldsig#dsa-sha1: Defaults to http://www.w3.org/2001/04/xmldsig-more#rsa-sha256.
+            http://www.w3.org/2001/04/xmlenc#sha512: Defaults to http://www.w3.org/2001/04/xmlenc#sha256.
+            id: (String) The ID of this resource.
+            issuer: (String)
+            metadata: (String) SAML Metadata Generated.
+            name: (String)
+            name_deny: Defaults to identifier.
+            name_id_policy: '(String) Allowed values:'
+            policy_engine_mode: '(String) Allowed values:'
+            pre_authentication_flow: (String)
+            promoted: (Boolean) Defaults to false.
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            signature_algorithm: '(String) Allowed values:'
+            signed_assertion: (Boolean) Defaults to false.
+            signed_response: (Boolean) Defaults to false.
+            signing_kp: (String)
+            slo_url: (String)
+            slug: (String)
+            sso_url: (String)
+            temporary_user_delete_after: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to days=1.'
+            urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified: Defaults to urn:oasis:names:tc:SAML:2.0:nameid-format:persistent.
+            user_matching_mode: '(String) Allowed values:'
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            username_deny: Defaults to identifier.
+            uuid: (String) Generated.
+            verification_kp: (String)
+        importStatements: []
+    authentik_source_scim:
+        subCategory: Directory
+        name: authentik_source_scim
+        title: authentik_source_scim Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "test-source",
+                  "slug": "test-source"
+                }
+        argumentDocs:
+            enabled: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            name: (String)
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            scim_url: (String) SCIM URL Generated.
+            slug: (String)
+            token: (String) SCIM URL Generated.
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_source_telegram Resource - terraform-provider-authentik:
+        subCategory: Directory
+        name: authentik_source_telegram Resource - terraform-provider-authentik
+        title: authentik_source_telegram Resource - terraform-provider-authentik
+        argumentDocs:
+            any: Defaults to any.
+            authentication_flow: (String)
+            bot_token: (String)
+            bot_username: (String)
+            enabled: (Boolean) Defaults to true.
+            enrollment_flow: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            policy_engine_mode: '(String) Allowed values:'
+            pre_authentication_flow: (String)
+            property_mappings: (List of String)
+            property_mappings_group: (List of String)
+            request_message_access: (Boolean) Defaults to false.
+            slug: (String)
+            user_matching_mode: '(String) Allowed values:'
+            user_path_template: (String) Defaults to goauthentik.io/sources/%(slug)s.
+            username_deny: Defaults to identifier.
+            uuid: (String) Generated.
+        importStatements: []
+    authentik_stage_authenticator_duo:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_duo
+        title: authentik_stage_authenticator_duo Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "api_hostname": "http://foo.bar.baz",
+                  "client_id": "foo",
+                  "client_secret": "bar",
+                  "name": "duo-setup"
+                }
+        argumentDocs:
+            admin_integration_key: (String)
+            admin_secret_key: (String, Sensitive)
+            api_hostname: (String)
+            client_id: (String)
+            client_secret: (String, Sensitive)
+            configure_flow: (String)
+            friendly_name: (String) Defaults to ``.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_authenticator_email Resource - terraform-provider-authentik:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_email Resource - terraform-provider-authentik
+        title: authentik_stage_authenticator_email Resource - terraform-provider-authentik
+        argumentDocs:
+            configure_flow: (String)
+            friendly_name: (String) Defaults to ``.
+            from_address: (String) Defaults to system@authentik.local.
+            host: (String) Defaults to localhost.
+            id: (String) The ID of this resource.
+            name: (String)
+            password: (String, Sensitive)
+            port: (Number) Defaults to 25.
+            subject: (String) Defaults to authentik.
+            template: (String) Defaults to email/password_reset.html.
+            timeout: (Number) Defaults to 30.
+            token_expiry: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            use_global_settings: (Boolean) Defaults to true.
+            use_ssl: (Boolean)
+            use_tls: (Boolean)
+            username: (String)
+        importStatements: []
+    authentik_stage_authenticator_endpoint_gdtc Resource - terraform-provider-authentik:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_endpoint_gdtc Resource - terraform-provider-authentik
+        title: authentik_stage_authenticator_endpoint_gdtc Resource - terraform-provider-authentik
+        argumentDocs:
+            configure_flow: (String)
+            credentials: (String, Sensitive)
+            friendly_name: (String) Defaults to ``.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_authenticator_sms Resource - terraform-provider-authentik:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_sms Resource - terraform-provider-authentik
+        title: authentik_stage_authenticator_sms Resource - terraform-provider-authentik
+        argumentDocs:
+            account_sid: (String, Sensitive)
+            auth: (String, Sensitive)
+            auth_password: (String, Sensitive)
+            auth_type: '(String) Allowed values:'
+            bearer: Defaults to basic.
+            configure_flow: (String)
+            friendly_name: (String) Defaults to ``.
+            from_number: (String)
+            generic: Defaults to twilio.
+            id: (String) The ID of this resource.
+            mapping: (String)
+            name: (String)
+            sms_provider: '(String) Allowed values:'
+            verify_only: (Boolean) Defaults to false.
+        importStatements: []
+    authentik_stage_authenticator_static:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_static
+        title: authentik_stage_authenticator_static Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "static-totp-setup"
+                }
+        argumentDocs:
+            configure_flow: (String)
+            friendly_name: (String) Defaults to ``.
+            id: (String) The ID of this resource.
+            name: (String)
+            token_count: (Number) Defaults to 6.
+            token_length: (Number) Defaults to 12.
+        importStatements: []
+    authentik_stage_authenticator_totp:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_totp
+        title: authentik_stage_authenticator_totp Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "totp-setup"
+                }
+        argumentDocs:
+            "8": Defaults to 6.
+            configure_flow: (String)
+            digits: '(String) Allowed values:'
+            friendly_name: (String) Defaults to ``.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_authenticator_validate:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_validate
+        title: authentik_stage_authenticator_validate Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "device_classes": [
+                    "static"
+                  ],
+                  "name": "authenticator-validate",
+                  "not_configured_action": "skip"
+                }
+        argumentDocs:
+            configuration_stages: (List of String)
+            device_classes: (List of String)
+            discouraged: Defaults to preferred.
+            id: (String) The ID of this resource.
+            last_auth_threshold: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to seconds=0.'
+            name: (String)
+            not_configured_action: '(String) Allowed values:'
+            webauthn_allowed_device_types: (List of String)
+            webauthn_user_verification: '(String) Allowed values:'
+        importStatements: []
+    authentik_stage_authenticator_webauthn:
+        subCategory: Flows & Stages
+        name: authentik_stage_authenticator_webauthn
+        title: authentik_stage_authenticator_webauthn Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "webauthn-setup"
+                }
+            - name: name
+              manifest: |-
+                {
+                  "device_type_restrictions": [
+                    "${data.authentik_webauthn_device_type.yubikey.aaguid}"
+                  ],
+                  "name": "webauthn-setup"
+                }
+              references:
+                device_type_restrictions: data.authentik_webauthn_device_type.yubikey.aaguid
+        argumentDocs:
+            authenticator_attachment: '(String) Allowed values:'
+            configure_flow: (String)
+            device_type_restrictions: (List of String)
+            discouraged: Defaults to preferred.
+            friendly_name: (String) Defaults to ``.
+            id: (String) The ID of this resource.
+            max_attempts: (Number)
+            name: (String)
+            required: Defaults to preferred.
+            resident_key_requirement: '(String) Allowed values:'
+            user_verification: '(String) Allowed values:'
+        importStatements: []
+    authentik_stage_captcha:
+        subCategory: Flows & Stages
+        name: authentik_stage_captcha
+        title: authentik_stage_captcha Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "captcha",
+                  "private_key": "foo",
+                  "public_key": "bar"
+                }
+        argumentDocs:
+            api_url: (String) Defaults to https://www.recaptcha.net/recaptcha/api/siteverify.
+            error_on_invalid_score: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            interactive: (Boolean) Defaults to false.
+            js_url: (String) Defaults to https://www.recaptcha.net/recaptcha/api.js.
+            name: (String)
+            private_key: (String, Sensitive)
+            public_key: (String)
+            score_max_threshold: (Number) Defaults to 0.5.
+            score_min_threshold: (Number) Defaults to 1.
+        importStatements: []
+    authentik_stage_consent:
+        subCategory: Flows & Stages
+        name: authentik_stage_consent
+        title: authentik_stage_consent Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "consent"
+                }
+        argumentDocs:
+            consent_expire_in: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to weeks=4.'
+            expiring: Defaults to always_require.
+            id: (String) The ID of this resource.
+            mode: '(String) Allowed values:'
+            name: (String)
+        importStatements: []
+    authentik_stage_deny:
+        subCategory: Flows & Stages
+        name: authentik_stage_deny
+        title: authentik_stage_deny Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "deny"
+                }
+        argumentDocs:
+            deny_message: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_dummy:
+        subCategory: Flows & Stages
+        name: authentik_stage_dummy
+        title: authentik_stage_dummy Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "dummy"
+                }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_email:
+        subCategory: Flows & Stages
+        name: authentik_stage_email
+        title: authentik_stage_email Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "email-verification"
+                }
+        argumentDocs:
+            activate_user_on_success: (Boolean) Defaults to false.
+            from_address: (String) Defaults to system@authentik.local.
+            host: (String) Defaults to localhost.
+            id: (String) The ID of this resource.
+            name: (String)
+            password: (String, Sensitive)
+            port: (Number) Defaults to 25.
+            recovery_cache_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=5.'
+            recovery_max_attempts: (Number) Defaults to 5.
+            subject: (String) Defaults to authentik.
+            template: (String) Defaults to email/password_reset.html.
+            timeout: (Number) Defaults to 30.
+            token_expiry: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            use_global_settings: (Boolean) Defaults to true.
+            use_ssl: (Boolean)
+            use_tls: (Boolean)
+            username: (String)
+        importStatements: []
+    authentik_stage_endpoints:
+        subCategory: Flows & Stages
+        name: authentik_stage_endpoints
+        title: authentik_stage_endpoints Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "connector": "${authentik_endpoints_connector_agent.name.id}",
+                  "name": "agent-connector"
+                }
+              references:
+                connector: authentik_endpoints_connector_agent.name.id
+              dependencies:
+                authentik_endpoints_connector_agent.name: |-
+                    {
+                      "name": "agent"
+                    }
+        argumentDocs:
+            connector: (String)
+            id: (String) The ID of this resource.
+            mode: '(String) Allowed values:'
+            name: (String)
+            required: Defaults to optional.
+        importStatements: []
+    authentik_stage_identification:
+        subCategory: Flows & Stages
+        name: authentik_stage_identification
+        title: authentik_stage_identification Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "test-ident",
+                  "password_stage": "${authentik_stage_password.name.id}",
+                  "sources": [
+                    "${authentik_source_oauth.name.uuid}"
+                  ],
+                  "user_fields": [
+                    "username"
+                  ]
+                }
+              references:
+                password_stage: authentik_stage_password.name.id
+                sources: authentik_source_oauth.name.uuid
+              dependencies:
+                authentik_source_oauth.name: |-
+                    {
+                      "authentication_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "consumer_key": "foo",
+                      "consumer_secret": "bar",
+                      "enrollment_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "name": "test",
+                      "provider_type": "discord",
+                      "slug": "test"
+                    }
+                authentik_stage_password.name: |-
+                    {
+                      "backends": [
+                        "authentik.core.auth.InbuiltBackend"
+                      ],
+                      "name": "test-pass"
+                    }
+        argumentDocs:
+            captcha_stage: (String)
+            case_insensitive_matching: (Boolean)
+            enable_remember_me: (Boolean) Defaults to false.
+            enrollment_flow: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            password_stage: (String)
+            passwordless_flow: (String)
+            pretend_user_exists: (Boolean) Defaults to true.
+            recovery_flow: (String)
+            show_matched_user: (Boolean) Defaults to true.
+            show_source_labels: (Boolean) Defaults to false.
+            sources: (List of String)
+            user_fields: (List of String)
+            webauthn_stage: (String)
+        importStatements: []
+    authentik_stage_invitation:
+        subCategory: Flows & Stages
+        name: authentik_stage_invitation
+        title: authentik_stage_invitation Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "invitation"
+                }
+        argumentDocs:
+            continue_flow_without_invitation: (Boolean) Defaults to false.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_mutual_tls:
+        subCategory: Flows & Stages
+        name: authentik_stage_mutual_tls
+        title: authentik_stage_mutual_tls Resource - terraform-provider-authentik
+        examples:
+            - name: mtls
+              manifest: |-
+                {
+                  "name": "mutual-tls"
+                }
+        argumentDocs:
+            cert_attribute: '(String) Allowed values:'
+            certificate_authorities: (List of String)
+            email: Defaults to email.
+            id: (String) The ID of this resource.
+            mode: '(String) Allowed values:'
+            name: (String)
+            required: Defaults to optional.
+            user_attribute: '(String) Allowed values:'
+        importStatements: []
+    authentik_stage_password:
+        subCategory: Flows & Stages
+        name: authentik_stage_password
+        title: authentik_stage_password Resource - terraform-provider-authentik
+        examples:
+            - name: test
+              manifest: |-
+                {
+                  "backends": [
+                    "authentik.core.auth.InbuiltBackend"
+                  ],
+                  "name": "test-stage"
+                }
+        argumentDocs:
+            allow_show_password: (Boolean) Defaults to false.
+            backends: (List of String)
+            configure_flow: (String)
+            failed_attempts_before_cancel: (Number) Defaults to 5.
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_prompt:
+        subCategory: Flows & Stages
+        name: authentik_stage_prompt
+        title: authentik_stage_prompt Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "fields": [
+                    "${resource.authentik_stage_prompt_field.field.id}"
+                  ],
+                  "name": "test"
+                }
+              references:
+                fields: resource.authentik_stage_prompt_field.field.id
+              dependencies:
+                authentik_stage_prompt_field.field: |-
+                    {
+                      "field_key": "username",
+                      "label": "Username",
+                      "name": "username",
+                      "type": "username"
+                    }
+        argumentDocs:
+            fields: (List of String)
+            id: (String) The ID of this resource.
+            name: (String)
+            validation_policies: (List of String)
+        importStatements: []
+    authentik_stage_prompt_field:
+        subCategory: Flows & Stages
+        name: authentik_stage_prompt_field
+        title: authentik_stage_prompt_field Resource - terraform-provider-authentik
+        examples:
+            - name: field
+              manifest: |-
+                {
+                  "field_key": "username",
+                  "label": "Username",
+                  "name": "username",
+                  "type": "username"
+                }
+        argumentDocs:
+            field_key: (String)
+            id: (String) The ID of this resource.
+            initial_value: (String)
+            initial_value_expression: (Boolean) Defaults to false.
+            label: (String)
+            name: (String)
+            order: (Number)
+            placeholder: (String)
+            placeholder_expression: (Boolean) Defaults to false.
+            required: (Boolean) Defaults to false.
+            sub_text: (String) Defaults to ``.
+            type: '(String) Allowed values:'
+        importStatements: []
+    authentik_stage_redirect:
+        subCategory: Flows & Stages
+        name: authentik_stage_redirect
+        title: authentik_stage_redirect Resource - terraform-provider-authentik
+        examples:
+            - name: static
+              manifest: |-
+                {
+                  "mode": "static",
+                  "name": "static-redirect",
+                  "target_static": "https://goauthentik.io"
+                }
+            - name: flow
+              manifest: |-
+                {
+                  "mode": "flow",
+                  "name": "flow-redirect",
+                  "target_flow": "${data.authentik_flow.default-authorization-flow.id}"
+                }
+              references:
+                target_flow: data.authentik_flow.default-authorization-flow.id
+        argumentDocs:
+            flow: Defaults to flow.
+            id: (String) The ID of this resource.
+            keep_context: (Boolean) Defaults to true.
+            mode: '(String) Allowed values:'
+            name: (String)
+            target_flow: (String)
+            target_static: (String)
+        importStatements: []
+    authentik_stage_source:
+        subCategory: Flows & Stages
+        name: authentik_stage_source
+        title: authentik_stage_source Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "source-stage",
+                  "source": "${authentik_source_oauth.name.id}"
+                }
+              references:
+                source: authentik_source_oauth.name.id
+              dependencies:
+                authentik_source_oauth.name: |-
+                    {
+                      "authentication_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "consumer_key": "foo",
+                      "consumer_secret": "bar",
+                      "enrollment_flow": "${data.authentik_flow.default-authorization-flow.id}",
+                      "name": "discord",
+                      "provider_type": "discord",
+                      "slug": "discord"
+                    }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+            resume_timeout: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=10.'
+            source: (String)
+        importStatements: []
+    authentik_stage_user_delete:
+        subCategory: Flows & Stages
+        name: authentik_stage_user_delete
+        title: authentik_stage_user_delete Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "user-delete"
+                }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_user_login:
+        subCategory: Flows & Stages
+        name: authentik_stage_user_login
+        title: authentik_stage_user_login Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "user-login"
+                }
+        argumentDocs:
+            bind_asn_network_ip: Defaults to no_binding.
+            bind_continent_country_city: Defaults to no_binding.
+            geoip_binding: '(String) Allowed values:'
+            id: (String) The ID of this resource.
+            name: (String)
+            network_binding: '(String) Allowed values:'
+            remember_device: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to days=30.'
+            remember_me_offset: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to seconds=0.'
+            session_duration: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to seconds=0.'
+            terminate_other_sessions: (Boolean) Defaults to false.
+        importStatements: []
+    authentik_stage_user_logout:
+        subCategory: Flows & Stages
+        name: authentik_stage_user_logout
+        title: authentik_stage_user_logout Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "user-logout"
+                }
+        argumentDocs:
+            id: (String) The ID of this resource.
+            name: (String)
+        importStatements: []
+    authentik_stage_user_write:
+        subCategory: Flows & Stages
+        name: authentik_stage_user_write
+        title: authentik_stage_user_write Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "create_users_as_inactive": false,
+                  "name": "user-write"
+                }
+        argumentDocs:
+            always_create: Defaults to create_when_required.
+            create_users_as_inactive: (Boolean) Defaults to true.
+            create_users_group: (String)
+            id: (String) The ID of this resource.
+            name: (String)
+            service_account: Defaults to external.
+            user_creation_mode: '(String) Allowed values:'
+            user_path_template: (String) Defaults to ``.
+            user_type: '(String) Allowed values:'
+        importStatements: []
+    authentik_system_settings:
+        subCategory: System
+        name: authentik_system_settings
+        title: authentik_system_settings Resource - terraform-provider-authentik
+        examples:
+            - name: settings
+              manifest: |-
+                {
+                  "default_user_change_username": true
+                }
+        argumentDocs:
+            avatars: (String) Defaults to gravatar,initials.
+            default_token_duration: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to minutes=30.'
+            default_token_length: (Number) Defaults to 60.
+            default_user_change_email: (Boolean) Defaults to false.
+            default_user_change_name: (Boolean) Defaults to true.
+            default_user_change_username: (Boolean) Defaults to false.
+            event_retention: '(String) Format: hours=1;minutes=2;seconds=3. Defaults to days=365.'
+            flags: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {"flows_refresh_others":false,"policies_buffered_access_view":false}.
+            footer_links: (List of Map of String)
+            gdpr_compliance: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            impersonation: (Boolean) Defaults to true.
+            pagination_default_page_size: (Number) Defaults to 20.
+            pagination_max_page_size: (Number) Defaults to 100.
+            reputation_lower_limit: (Number) Defaults to -5.
+            reputation_upper_limit: (Number) Defaults to 5.
+        importStatements: []
+    authentik_task_schedule:
+        subCategory: Tasks
+        name: authentik_task_schedule
+        title: authentik_task_schedule Resource - terraform-provider-authentik
+        examples:
+            - name: default
+              manifest: |-
+                {
+                  "app_model": "authentik_providers_scim.scimprovider",
+                  "crontab": "6 */4 * * 2",
+                  "model_id": "${authentik_provider_scim.name.id}"
+                }
+              references:
+                model_id: authentik_provider_scim.name.id
+              dependencies:
+                authentik_provider_scim.name: |-
+                    {
+                      "name": "name",
+                      "token": "foo",
+                      "url": "http://localhost"
+                    }
+        argumentDocs:
+            app_model: '(String) Allowed values:'
+            crontab: (String) Crontab expression at which this task will run.
+            id: (String) The ID of this resource.
+            model_id: (String)
+            paused: (Boolean) Defaults to false.
+        importStatements: []
+    authentik_token:
+        subCategory: Directory
+        name: authentik_token
+        title: authentik_token Resource - terraform-provider-authentik
+        examples:
+            - name: default
+              manifest: |-
+                {
+                  "description": "My secret token",
+                  "expires": "2025-01-01T15:04:05Z",
+                  "identifier": "my-token",
+                  "user": "${authentik_user.name.id}"
+                }
+              references:
+                user: authentik_user.name.id
+              dependencies:
+                authentik_user.name: |-
+                    {
+                      "name": "User",
+                      "username": "user"
+                    }
+        argumentDocs:
+            app_password: Defaults to api.
+            description: (String)
+            expires: (String)
+            expires_in: (Number) Generated.
+            expiring: (Boolean) Defaults to true.
+            id: (String) The ID of this resource.
+            identifier: (String)
+            intent: '(String) Allowed values:'
+            key: (String, Sensitive) Generated.
+            retrieve_key: (Boolean) Defaults to false.
+            user: (Number)
+        importStatements: []
+    authentik_user:
+        subCategory: Directory
+        name: authentik_user
+        title: authentik_user Resource - terraform-provider-authentik
+        examples:
+            - name: name
+              manifest: |-
+                {
+                  "name": "User",
+                  "username": "user"
+                }
+              dependencies:
+                authentik_group.group: |-
+                    {
+                      "name": "group-name"
+                    }
+            - name: name
+              manifest: |-
+                {
+                  "groups": [
+                    "${authentik_group.group.id}"
+                  ],
+                  "name": "User",
+                  "username": "user"
+                }
+              references:
+                groups: authentik_group.group.id
+              dependencies:
+                authentik_group.group: |-
+                    {
+                      "name": "group-name"
+                    }
+        argumentDocs:
+            attributes: (String) JSON format expected. Use jsonencode() to pass objects. Defaults to {}.
+            email: (String)
+            groups: (List of String) Generated.
+            id: (String) The ID of this resource.
+            internal_service_account: Defaults to internal.
+            is_active: (Boolean) Defaults to true.
+            name: (String) Defaults to ``.
+            password: (String, Sensitive) Optionally set the user's password. Changing the password in authentik will not trigger an update here.
+            path: (String) Defaults to users.
+            type: '(String) Allowed values:'
+            username: (String)
         importStatements: []

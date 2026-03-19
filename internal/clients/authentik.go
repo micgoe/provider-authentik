@@ -24,6 +24,13 @@ const (
 	errUnmarshalCredentials = "cannot unmarshal authentik credentials as JSON"
 )
 
+const (
+	keyToken    = "token"
+	keyUrl      = "url"
+	keyHeaders  = "headers"
+	keyInsecure = "insecure"
+)
+
 // TerraformSetupBuilder builds Terraform a terraform.SetupFn function which
 // returns Terraform provider setup configuration
 func TerraformSetupBuilder(version, providerSource, providerVersion string) terraform.SetupFn {
@@ -51,10 +58,20 @@ func TerraformSetupBuilder(version, providerSource, providerVersion string) terr
 		}
 
 		// Set credentials in Terraform provider configuration.
-		/*ps.Configuration = map[string]any{
-			"username": creds["username"],
-			"password": creds["password"],
-		}*/
+		ps.Configuration = map[string]any{}
+
+		if v, ok := creds[keyToken]; ok {
+			ps.Configuration[keyToken] = v
+		}
+		if v, ok := creds[keyUrl]; ok {
+			ps.Configuration[keyUrl] = v
+		}
+		if v, ok := creds[keyHeaders]; ok {
+			ps.Configuration[keyHeaders] = v
+		}
+		if v, ok := creds[keyInsecure]; ok {
+			ps.Configuration[keyInsecure] = v
+		}
 		return ps, nil
 	}
 }

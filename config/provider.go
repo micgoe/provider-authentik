@@ -6,8 +6,8 @@ import (
 
 	ujconfig "github.com/crossplane/upjet/v2/pkg/config"
 
-	nullCluster "github.com/bwi-de/provider-authentik/config/cluster/null"
-	nullNamespaced "github.com/bwi-de/provider-authentik/config/namespaced/null"
+	dictionaryCluster "github.com/bwi-de/provider-authentik/config/cluster/dictionary"
+	dictionaryNamespaced "github.com/bwi-de/provider-authentik/config/namespaced/dictionary"
 )
 
 const (
@@ -33,7 +33,7 @@ func GetProvider() *ujconfig.Provider {
 
 	for _, configure := range []func(provider *ujconfig.Provider){
 		// add custom config functions
-		nullCluster.Configure,
+		dictionaryCluster.Configure,
 	} {
 		configure(pc)
 	}
@@ -57,7 +57,7 @@ func GetProviderNamespaced() *ujconfig.Provider {
 
 	for _, configure := range []func(provider *ujconfig.Provider){
 		// add custom config functions
-		nullNamespaced.Configure,
+		dictionaryNamespaced.Configure,
 	} {
 		configure(pc)
 	}

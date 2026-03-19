@@ -10,7 +10,7 @@ package namespaced
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 
-	v1alpha1 "github.com/bwi-de/provider-authentik/apis/namespaced/null/v1alpha1"
+	v1alpha1 "github.com/bwi-de/provider-authentik/apis/namespaced/dictionary/v1alpha1"
 	v1alpha1namespaced "github.com/bwi-de/provider-authentik/apis/namespaced/v1alpha1"
 	v1beta1 "github.com/bwi-de/provider-authentik/apis/namespaced/v1beta1"
 )

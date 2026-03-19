@@ -1,0 +1,15 @@
+apiVersion: dictionary.authentik.m.goauthentik.io/v1alpha1
+kind: Group
+metadata:
+  annotations:
+    meta.upbound.io/example-id: dictionary/v1alpha1/group
+  labels:
+    testing.upbound.io/example-name: group
+  name: group
+  namespace: crossplane-system
+spec:
+  forProvider:
+    isSuperuser: true
+    name: tf_admins
+    users:
+    - ${authentik_user.name.id}
